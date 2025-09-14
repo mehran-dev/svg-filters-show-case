@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dark/Light Switch UI</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f0f0f0;
+        transition: background-color 0.5s;
+      }
+
+      .switch-wrapper {
+        position: relative;
+        width: 120px;
+        height: 60px;
+        border-radius: 30px;
+        background-color: #ffdd00;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        transition: background-color 0.5s;
+      }
+
+      .switch-wrapper input {
+        display: none;
+      }
+
+      /* Background gradient / mask */
+      .switch-bg {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 30px;
+        background: linear-gradient(
+          to right,
+          #ffd500 0%,
+          #fff0 50%,
+          #222 50%,
+          #111 100%
+        );
+        transition: background 0.5s;
+      }
+
+      /* Toggle circle */
+      .toggle {
+        position: absolute;
+        top: 50%;
+        left: 5px;
+        width: 50px;
+        height: 50px;
+        background-color: #fff;
+        border-radius: 50%;
+        transform: translateY(-50%);
+        transition: left 0.5s, background-color 0.5s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        color: #ffdd00;
+      }
+
+      /* Dark mode active */
+      body.dark {
+        background-color: #222;
+      }
+
+      body.dark .switch-wrapper {
+        background-color: #333;
+      }
+
+      body.dark .toggle {
+        left: 65px;
+        background-color: #444;
+        color: #ffdd00;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="switch-wrapper">
+      <input type="checkbox" id="switch" />
+      <div class="switch-bg"></div>
+      <div class="toggle">☀️</div>
+    </div>
+
+    <script>
+      const toggleWrapper = document.querySelector(".switch-wrapper");
+      const toggleInput = document.getElementById("switch");
+      const toggleCircle = document.querySelector(".toggle");
+      const body = document.body;
+
+      toggleWrapper.addEventListener("click", () => {
+        toggleInput.checked = !toggleInput.checked;
+        if (toggleInput.checked) {
+          body.classList.add("dark");
+          toggleCircle.textContent = "🌙";
+        } else {
+          body.classList.remove("dark");
+          toggleCircle.textContent = "☀️";
+        }
+      });
+    </script>
+  </body>
+</html>
