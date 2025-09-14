@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔥 Fire Heat Haze Effect with Controls</title>
+    <style>
+      body {
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+      }
+      .svg-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      svg {
+        width: 300px;
+        height: 400px;
+        border: 1px solid #444;
+        background: black;
+      }
+      img {
+        width: 300px;
+        height: 400px;
+        border: 1px solid #444;
+      }
+      .controls {
+        background: #222;
+        padding: 15px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 220px;
+      }
+      label {
+        font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      input,
+      button {
+        padding: 4px;
+        border-radius: 4px;
+        border: none;
+        width: 100%;
+      }
+      button {
+        cursor: pointer;
+        background: #ff5722;
+        color: white;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="svg-container">
+      <h3>🔥 Original Fire</h3>
+      <img src="./f16.jpg" alt="Fire" />
+    </div>
+
+    <div class="svg-container">
+      <h3>🔥 Fire with Heat Haze + Glow</h3>
+      <svg viewBox="0 0 300 400">
+        <defs>
+          <filter id="heatHazeGlow">
+            <feTurbulence
+              id="turb"
+              type="fractalNoise"
+              baseFrequency="0.02"
+              numOctaves="2"
+              seed="3"
+              result="turb"
+            />
+            <feDisplacementMap
+              id="disp"
+              in="SourceGraphic"
+              in2="turb"
+              scale="20"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="disp"
+            />
+            <feGaussianBlur
+              id="blur"
+              in="disp"
+              stdDeviation="4"
+              result="blur"
+            />
+            <feColorMatrix
+              id="glowMatrix"
+              in="blur"
+              type="matrix"
+              values="1 0 0 0 0
+                      1 0.2 0 0 0
+                      0 0 0 0 0
+                      0 0 0 15 -5"
+              result="glow"
+            />
+            <feMerge>
+              <feMergeNode in="disp" />
+              <feMergeNode in="glow" />
+            </feMerge>
+          </filter>
+        </defs>
+        <image
+          id="fireImage"
+          href="./f16.jpg"
+          width="300"
+          height="400"
+          filter="url(#heatHazeGlow)"
+        />
+      </svg>
+      <div class="controls">
+        <h4>🔥 Heat Haze Controls</h4>
+        <label>
+          Base Frequency
+          <input
+            type="range"
+            id="baseFreq"
+            min="0.001"
+            max="0.05"
+            step="0.001"
+            value="0.02"
+          />
+        </label>
+        <label>
+          Displacement Scale
+          <input type="range" id="scale" min="0" max="50" step="1" value="20" />
+        </label>
+        <label>
+          Glow Strength (stdDeviation)
+          <input
+            type="range"
+            id="glowStrength"
+            min="0"
+            max="10"
+            step="0.1"
+            value="4"
+          />
+        </label>
+        <button id="toggle">Pause Animation</button>
+      </div>
+    </div>
+
+    <script>
+      const turb = document.getElementById("turb");
+      const disp = document.getElementById("disp");
+      const blur = document.getElementById("blur");
+
+      const baseFreqInput = document.getElementById("baseFreq");
+      const scaleInput = document.getElementById("scale");
+      const glowStrengthInput = document.getElementById("glowStrength");
+      const toggleBtn = document.getElementById("toggle");
+
+      let animating = true;
+      let frame = 0;
+
+      function animate() {
+        if (animating) {
+          frame += 0.02;
+          let bf = parseFloat(baseFreqInput.value);
+          turb.setAttribute("baseFrequency", `${bf + Math.sin(frame) * 0.005}`);
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // Handlers
+      baseFreqInput.addEventListener("input", () => {
+        turb.setAttribute("baseFrequency", baseFreqInput.value);
+      });
+      scaleInput.addEventListener("input", () => {
+        disp.setAttribute("scale", scaleInput.value);
+      });
+      glowStrengthInput.addEventListener("input", () => {
+        blur.setAttribute("stdDeviation", glowStrengthInput.value);
+      });
+      toggleBtn.addEventListener("click", () => {
+        animating = !animating;
+        toggleBtn.textContent = animating
+          ? "Pause Animation"
+          : "Resume Animation";
+      });
+    </script>
+  </body>
+</html>

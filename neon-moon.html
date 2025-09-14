@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Neon Plasma Orb</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #111;
+        color: white;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        align-items: flex-start;
+      }
+      .svg-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      svg {
+        width: 300px;
+        height: 300px;
+        border: 1px solid #333;
+        background: black;
+        border-radius: 50%;
+      }
+      .controls {
+        background: #222;
+        padding: 15px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 220px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        font-size: 14px;
+      }
+      input,
+      button {
+        padding: 4px;
+        border-radius: 4px;
+        border: none;
+        width: 100%;
+      }
+      button {
+        cursor: pointer;
+        background: #00ffff;
+        color: black;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="svg-container">
+      <h3>✨ Neon Plasma Orb</h3>
+      <svg viewBox="0 0 300 300">
+        <defs>
+          <filter id="plasmaFilter">
+            <feTurbulence
+              id="plasmaTurb"
+              type="fractalNoise"
+              baseFrequency="0.05"
+              numOctaves="3"
+              result="turb"
+            />
+            <feDisplacementMap
+              id="plasmaDisp"
+              in="SourceGraphic"
+              in2="turb"
+              scale="20"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="disp"
+            />
+            <feGaussianBlur
+              id="plasmaBlur"
+              in="disp"
+              stdDeviation="5"
+              result="blur"
+            />
+            <feColorMatrix
+              id="plasmaColor"
+              in="blur"
+              type="matrix"
+              values="0 0 1 0 0
+                  0 1 0 0 0
+                  1 0 0 0 0
+                  0 0 0 1 0"
+            />
+            <feMerge>
+              <feMergeNode in="disp" />
+              <feMergeNode in="plasmaColor" />
+            </feMerge>
+          </filter>
+        </defs>
+        <circle
+          cx="150"
+          cy="150"
+          r="120"
+          fill="#fff"
+          filter="url(#plasmaFilter)"
+        />
+      </svg>
+
+      <div class="controls">
+        <h4>Plasma Controls</h4>
+        <label>
+          Base Frequency
+          <input
+            type="range"
+            id="baseFreq"
+            min="0.01"
+            max="0.1"
+            step="0.001"
+            value="0.05"
+          />
+        </label>
+        <label>
+          Displacement Scale
+          <input type="range" id="scale" min="0" max="50" step="1" value="20" />
+        </label>
+        <label>
+          Blur
+          <input type="range" id="blur" min="0" max="15" step="0.1" value="5" />
+        </label>
+        <button id="toggle">Pause Animation</button>
+      </div>
+    </div>
+
+    <script>
+      const turb = document.getElementById("plasmaTurb");
+      const disp = document.getElementById("plasmaDisp");
+      const blurEl = document.getElementById("plasmaBlur");
+
+      const baseFreqInput = document.getElementById("baseFreq");
+      const scaleInput = document.getElementById("scale");
+      const blurInput = document.getElementById("blur");
+      const toggleBtn = document.getElementById("toggle");
+
+      let animating = true;
+      let frame = 0;
+
+      function animate() {
+        if (animating) {
+          frame += 0.02;
+          turb.setAttribute(
+            "baseFrequency",
+            `${parseFloat(baseFreqInput.value) + Math.sin(frame) * 0.005}`
+          );
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // Handlers
+      baseFreqInput.addEventListener("input", () => {
+        turb.setAttribute("baseFrequency", baseFreqInput.value);
+      });
+      scaleInput.addEventListener("input", () => {
+        disp.setAttribute("scale", scaleInput.value);
+      });
+      blurInput.addEventListener("input", () => {
+        blurEl.setAttribute("stdDeviation", blurInput.value);
+      });
+      toggleBtn.addEventListener("click", () => {
+        animating = !animating;
+        toggleBtn.textContent = animating
+          ? "Pause Animation"
+          : "Resume Animation";
+      });
+    </script>
+  </body>
+</html>

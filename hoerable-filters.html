@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Filters Playground - Full Styled</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        background: #f9f9f9;
+      }
+      .main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        flex: 1;
+      }
+      svg {
+        border: 1px solid #ccc;
+        width: 300px;
+        height: 300px;
+        background: white;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      .filter-prop {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+      .filter-info {
+        font-size: 0.85em;
+        color: #555;
+        margin-bottom: 5px;
+      }
+      .filters-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .filter-item {
+        display: flex;
+        justify-content: space-between;
+        background: #f0f0f0;
+        padding: 5px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .filter-item:hover {
+        background: #e0e0e0;
+      }
+      .remove {
+        color: red;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .sidebar {
+        width: 250px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      select,
+      input[type="number"],
+      input[type="range"],
+      input[type="color"],
+      input[type="text"] {
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+      }
+      button {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        background: #007bff;
+        color: white;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main">
+      <h2>SVG Filters Playground</h2>
+
+      <div style="display: flex; gap: 20px">
+        <svg id="originalSVG" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="80" fill="tomato" />
+        </svg>
+
+        <svg id="filteredSVG" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="80" fill="tomato" />
+        </svg>
+      </div>
+
+      <div class="controls">
+        <label for="filterSelect">Select Filter:</label>
+        <select id="filterSelect"></select>
+
+        <div id="filterProps"></div>
+        <button id="addFilter">Add Filter</button>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <h3>Applied Filters</h3>
+      <div class="filters-stack" id="filtersStack"></div>
+    </div>
+
+    <script>
+      const svgNS = "http://www.w3.org/2000/svg";
+      const filterSelect = document.getElementById("filterSelect");
+      const filterPropsDiv = document.getElementById("filterProps");
+      const addFilterBtn = document.getElementById("addFilter");
+      const filteredSVG = document.getElementById("filteredSVG");
+      const filtersStackDiv = document.getElementById("filtersStack");
+
+      let filterCounter = 0;
+      let filtersStack = [];
+
+      // All major SVG filters with props, types, defaults, and description
+
+      const filtersData = {
+        feGaussianBlur: {
+          props: {
+            stdDeviation: {
+              type: "range",
+              value: 5,
+              min: 0,
+              max: 20,
+              step: 0.5,
+            },
+          },
+          description: "Blurs the graphic. Higher stdDeviation = more blur.",
+        },
+        feDropShadow: {
+          props: {
+            dx: { type: "number", value: 4 },
+            dy: { type: "number", value: 4 },
+            stdDeviation: { type: "range", value: 2, min: 0, max: 10 },
+            floodColor: { type: "color", value: "#000" },
+            floodOpacity: {
+              type: "range",
+              value: 0.5,
+              min: 0,
+              max: 1,
+              step: 0.05,
+            },
+          },
+          description: "Creates a drop shadow of the graphic.",
+        },
+        feBlend: {
+          props: {
+            mode: {
+              type: "select",
+              value: "multiply",
+              options: ["normal", "multiply", "screen", "darken", "lighten"],
+            },
+          },
+          description: "Blends two graphics together using a blending mode.",
+        },
+        feColorMatrix: {
+          props: {
+            type: {
+              type: "select",
+              value: "matrix",
+              options: ["matrix", "saturate", "hueRotate", "luminanceToAlpha"],
+            },
+            values: {
+              type: "text",
+              value: "1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0",
+            },
+          },
+          description: "Changes colors using a transformation matrix.",
+        },
+        feComponentTransfer: {
+          props: {
+            type: {
+              type: "select",
+              value: "linear",
+              options: ["identity", "table", "discrete", "linear", "gamma"],
+            },
+          },
+          description: "Performs component-wise remapping of pixel values.",
+        },
+        feComposite: {
+          props: {
+            in2: { type: "text", value: "SourceGraphic" },
+            operator: {
+              type: "select",
+              value: "over",
+              options: ["over", "in", "out", "atop", "xor", "arithmetic"],
+            },
+          },
+          description: "Composites two images using an operator.",
+        },
+        feConvolveMatrix: {
+          props: {
+            order: { type: "number", value: 3 },
+            kernelMatrix: { type: "text", value: "0 -1 0 -1 5 -1 0 -1 0" },
+            divisor: { type: "number", value: 1 },
+            bias: { type: "number", value: 0 },
+          },
+          description:
+            "Applies a convolution matrix (blur, sharpen, edge detection).",
+        },
+        feDiffuseLighting: {
+          props: {
+            surfaceScale: { type: "number", value: 1 },
+            diffuseConstant: { type: "number", value: 1 },
+          },
+          description: "Lights a graphic using alpha as a bump map.",
+        },
+        feSpecularLighting: {
+          props: {
+            surfaceScale: { type: "number", value: 1 },
+            specularConstant: { type: "number", value: 1 },
+            specularExponent: { type: "number", value: 1 },
+          },
+          description: "Creates specular lighting based on alpha as bump map.",
+        },
+        feDistantLight: {
+          props: {
+            azimuth: { type: "number", value: 45 },
+            elevation: { type: "number", value: 45 },
+          },
+          description: "Specifies a distant light source for lighting filters.",
+        },
+        fePointLight: {
+          props: {
+            x: { type: "number", value: 50 },
+            y: { type: "number", value: 50 },
+            z: { type: "number", value: 50 },
+          },
+          description: "Specifies a point light source.",
+        },
+        feSpotLight: {
+          props: {
+            x: { type: "number", value: 50 },
+            y: { type: "number", value: 50 },
+            z: { type: "number", value: 50 },
+            pointsAtX: { type: "number", value: 0 },
+            pointsAtY: { type: "number", value: 0 },
+            pointsAtZ: { type: "number", value: 0 },
+            specularExponent: { type: "number", value: 1 },
+            limitingConeAngle: { type: "number", value: 20 },
+          },
+          description: "Specifies a spotlight source.",
+        },
+        feFlood: {
+          props: {
+            "flood-color": { type: "color", value: "#ff0000" },
+            "flood-opacity": {
+              type: "range",
+              value: 0.5,
+              min: 0,
+              max: 1,
+              step: 0.05,
+            },
+          },
+          description: "Fills the filter region with a color.",
+        },
+        feImage: {
+          props: { href: { type: "text", value: "" } },
+          description: "Uses an external image as input.",
+        },
+        feMerge: {
+          props: {},
+          description: "Merges multiple inputs; usually used with feMergeNode.",
+        },
+        feMergeNode: {
+          props: { in: { type: "text", value: "SourceGraphic" } },
+          description: "Child of feMerge to specify which input to merge.",
+        },
+        feMorphology: {
+          props: {
+            operator: {
+              type: "select",
+              value: "dilate",
+              options: ["erode", "dilate"],
+            },
+            radius: { type: "number", value: 2 },
+          },
+          description: "Erodes or dilates shapes.",
+        },
+        feOffset: {
+          props: {
+            dx: { type: "number", value: 10 },
+            dy: { type: "number", value: 10 },
+          },
+          description: "Offsets the graphic.",
+        },
+        feTile: {
+          props: { in: { type: "text", value: "SourceGraphic" } },
+          description:
+            "Fills a target rectangle with a repeated pattern of an input graphic.",
+        },
+        feTurbulence: {
+          props: {
+            type: {
+              type: "select",
+              value: "turbulence",
+              options: ["turbulence", "fractalNoise"],
+            },
+            baseFrequency: { type: "number", value: 0.05 },
+            numOctaves: { type: "number", value: 3 },
+          },
+          description: "Creates Perlin turbulence or fractal noise.",
+        },
+        feDisplacementMap: {
+          props: {
+            in2: { type: "text", value: "SourceGraphic" },
+            scale: { type: "number", value: 10 },
+            xChannelSelector: {
+              type: "select",
+              value: "R",
+              options: ["R", "G", "B", "A"],
+            },
+            yChannelSelector: {
+              type: "select",
+              value: "R",
+              options: ["R", "G", "B", "A"],
+            },
+          },
+          description: "Displaces the graphic using another image.",
+        },
+      };
+
+      console.log(Object.keys(filtersData).length);
+
+      // Populate select
+      Object.keys(filtersData).forEach((f) => {
+        const o = document.createElement("option");
+        o.value = f;
+        o.textContent = f;
+        filterSelect.appendChild(o);
+      });
+
+      // Render props
+      function renderProps(filterName) {
+        filterPropsDiv.innerHTML = "";
+        const f = filtersData[filterName];
+        const info = document.createElement("div");
+        info.className = "filter-info";
+        info.textContent = f.description || "";
+        filterPropsDiv.appendChild(info);
+        for (const prop in f.props) {
+          const data = f.props[prop];
+          const container = document.createElement("div");
+          container.className = "filter-prop";
+          const label = document.createElement("label");
+          label.textContent = prop;
+          let input;
+          switch (data.type) {
+            case "number":
+            case "range":
+            case "color":
+              input = document.createElement("input");
+              input.type = data.type;
+              input.value = data.value;
+              if (data.min !== undefined) input.min = data.min;
+              if (data.max !== undefined) input.max = data.max;
+              if (data.step !== undefined) input.step = data.step;
+              break;
+            case "select":
+              input = document.createElement("select");
+              data.options.forEach((opt) => {
+                const o = document.createElement("option");
+                o.value = opt;
+                o.textContent = opt;
+                if (opt === data.value) o.selected = true;
+                input.appendChild(o);
+              });
+              break;
+            case "text":
+              input = document.createElement("input");
+              input.type = "text";
+              input.value = data.value;
+              break;
+          }
+          input.id = `prop-${prop}`;
+          container.appendChild(label);
+          container.appendChild(input);
+          filterPropsDiv.appendChild(container);
+        }
+      }
+
+      // Add filter
+      addFilterBtn.addEventListener("click", () => {
+        const filterName = filterSelect.value;
+        const filterData = filtersData[filterName];
+        const id = `filter-${filterCounter++}`;
+        const props = {};
+        for (const prop in filterData.props) {
+          const val = document.getElementById(`prop-${prop}`).value;
+          props[prop] =
+            filterData.props[prop].type === "number" ||
+            filterData.props[prop].type === "range"
+              ? Number(val)
+              : val;
+        }
+        filtersStack.push({ id, name: filterName, props, enabled: true });
+        renderFiltersStack();
+        updateSVGFilters();
+      });
+
+      // Render stack sidebar
+      function renderFiltersStack() {
+        filtersStackDiv.innerHTML = "";
+        filtersStack.forEach((f) => {
+          const div = document.createElement("div");
+          div.className = "filter-item";
+          div.textContent = f.name;
+          div.addEventListener("mouseenter", () => {
+            f.enabled = false;
+            updateSVGFilters();
+          });
+          div.addEventListener("mouseleave", () => {
+            f.enabled = true;
+            updateSVGFilters();
+          });
+          const btn = document.createElement("button");
+          btn.textContent = "X";
+          btn.className = "remove";
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            filtersStack = filtersStack.filter((item) => item.id !== f.id);
+            renderFiltersStack();
+            updateSVGFilters();
+          });
+          div.appendChild(btn);
+          filtersStackDiv.appendChild(div);
+        });
+      }
+
+      // Update SVG
+      function updateSVGFilters() {
+        let defs = filteredSVG.querySelector("defs");
+        if (!defs) {
+          defs = document.createElementNS(svgNS, "defs");
+          filteredSVG.prepend(defs);
+        }
+        defs.innerHTML = "";
+        filtersStack.forEach((f) => {
+          if (!f.enabled) return;
+          const filterEl = document.createElementNS(svgNS, "filter");
+          filterEl.setAttribute("id", f.id);
+          const feEl = document.createElementNS(svgNS, f.name);
+          for (const prop in f.props) feEl.setAttribute(prop, f.props[prop]);
+          filterEl.appendChild(feEl);
+          defs.appendChild(filterEl);
+        });
+        const chain = filtersStack
+          .filter((f) => f.enabled)
+          .map((f) => `url(#${f.id})`)
+          .join(" ");
+        filteredSVG
+          .querySelectorAll("circle")
+          .forEach((el) => el.setAttribute("filter", chain));
+      }
+
+      // Initial
+      renderProps(filterSelect.value);
+      filterSelect.addEventListener("change", () =>
+        renderProps(filterSelect.value)
+      );
+    </script>
+  </body>
+</html>

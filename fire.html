@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Fire Effect Filter</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        background: #111;
+        color: white;
+      }
+      .svg-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+      svg {
+        border: 1px solid #333;
+        width: 300px;
+        height: 400px;
+        background: black;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background: #222;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+        min-width: 240px;
+      }
+      label {
+        font-size: 14px;
+        display: block;
+      }
+      input,
+      button {
+        padding: 4px;
+        border-radius: 4px;
+        border: 1px solid #555;
+        margin-top: 4px;
+        width: 100%;
+        background: #111;
+        color: white;
+      }
+      .filter-item {
+        background: #333;
+        padding: 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .filter-item:hover {
+        background: #444;
+      }
+      .remove {
+        background: none;
+        border: none;
+        color: red;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="svg-container">
+      <h3>🔥 Fire Effect 🔥</h3>
+      <svg id="fireSVG" viewBox="0 0 300 400">
+        <defs>
+          <filter id="fireFilter">
+            <feTurbulence
+              id="fireTurb"
+              type="turbulence"
+              baseFrequency="0.05"
+              numOctaves="3"
+              seed="2"
+              result="turb"
+            />
+            <feDisplacementMap
+              id="fireDisp"
+              in="SourceGraphic"
+              in2="turb"
+              scale="40"
+              xChannelSelector="R"
+              yChannelSelector="G"
+              result="disp"
+            />
+            <feColorMatrix
+              id="fireColor"
+              type="matrix"
+              values="1 0 0 0 0
+                      0.5 0 0 0 0
+                      0 0 0 0 0
+                      0 0 0 1 0"
+              result="color"
+            />
+            <feGaussianBlur id="fireBlur" stdDeviation="2" />
+          </filter>
+        </defs>
+
+        <rect
+          x="50"
+          y="100"
+          width="200"
+          height="300"
+          fill="white"
+          filter="url(#fireFilter)"
+        />
+      </svg>
+
+      <div class="controls">
+        <h4>Fire Controls</h4>
+        <label>
+          Base Frequency:
+          <input
+            type="range"
+            id="fireBaseFreq"
+            min="0.001"
+            max="0.1"
+            step="0.001"
+            value="0.05"
+          />
+        </label>
+        <label>
+          Scale:
+          <input
+            type="range"
+            id="fireScale"
+            min="0"
+            max="100"
+            step="1"
+            value="40"
+          />
+        </label>
+        <label>
+          Blur:
+          <input
+            type="range"
+            id="fireBlurInput"
+            min="0"
+            max="10"
+            step="0.1"
+            value="2"
+          />
+        </label>
+        <button id="fireToggle">Pause Animation</button>
+
+        <h4>Active Filters</h4>
+        <div id="fireFiltersStack"></div>
+      </div>
+    </div>
+
+    <script>
+      const fireTurb = document.getElementById("fireTurb");
+      const fireDisp = document.getElementById("fireDisp");
+      const fireBlur = document.getElementById("fireBlur");
+
+      const fireBaseFreqInput = document.getElementById("fireBaseFreq");
+      const fireScaleInput = document.getElementById("fireScale");
+      const fireBlurInput = document.getElementById("fireBlurInput");
+      const fireToggleBtn = document.getElementById("fireToggle");
+      const fireFiltersStackDiv = document.getElementById("fireFiltersStack");
+
+      let animating = true;
+      let frame = 0;
+
+      // Animate turbulence for flicker
+      function animate() {
+        if (animating) {
+          frame += 0.02;
+          let bf = parseFloat(fireBaseFreqInput.value);
+          fireTurb.setAttribute(
+            "baseFrequency",
+            `${bf + Math.sin(frame) * 0.01}`
+          );
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // Controls
+      fireBaseFreqInput.addEventListener("input", () => {
+        fireTurb.setAttribute("baseFrequency", fireBaseFreqInput.value);
+      });
+      fireScaleInput.addEventListener("input", () => {
+        fireDisp.setAttribute("scale", fireScaleInput.value);
+      });
+      fireBlurInput.addEventListener("input", () => {
+        fireBlur.setAttribute("stdDeviation", fireBlurInput.value);
+      });
+      fireToggleBtn.addEventListener("click", () => {
+        animating = !animating;
+        fireToggleBtn.textContent = animating
+          ? "Pause Animation"
+          : "Resume Animation";
+      });
+
+      // Stack UI
+      function renderStack() {
+        fireFiltersStackDiv.innerHTML = "";
+
+        function addFilterItem(name, onEnter, onLeave, onRemove) {
+          const div = document.createElement("div");
+          div.className = "filter-item";
+          div.textContent = name;
+          div.addEventListener("mouseenter", onEnter);
+          div.addEventListener("mouseleave", onLeave);
+          const btn = document.createElement("button");
+          btn.className = "remove";
+          btn.textContent = "X";
+          btn.addEventListener("click", () => {
+            onRemove();
+            div.remove();
+          });
+          div.appendChild(btn);
+          fireFiltersStackDiv.appendChild(div);
+        }
+
+        addFilterItem(
+          "Turbulence",
+          () => fireTurb.setAttribute("baseFrequency", "0"),
+          () => fireTurb.setAttribute("baseFrequency", fireBaseFreqInput.value),
+          () => fireTurb.remove()
+        );
+
+        addFilterItem(
+          "Displacement",
+          () => fireDisp.setAttribute("scale", "0"),
+          () => fireDisp.setAttribute("scale", fireScaleInput.value),
+          () => fireDisp.remove()
+        );
+
+        addFilterItem(
+          "Color Matrix",
+          () => fireDisp.setAttribute("in", "SourceGraphic"),
+          () => fireDisp.setAttribute("in", "turb"),
+          () => fireDisp.remove()
+        );
+
+        addFilterItem(
+          "Blur",
+          () => fireBlur.setAttribute("stdDeviation", "0"),
+          () => fireBlur.setAttribute("stdDeviation", fireBlurInput.value),
+          () => fireBlur.remove()
+        );
+      }
+      renderStack();
+    </script>
+  </body>
+</html>

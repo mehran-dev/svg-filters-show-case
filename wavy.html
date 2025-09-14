@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Animated Sea Waves Filter</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        background: #eef9ff;
+      }
+      .svg-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      svg {
+        border: 1px solid #ccc;
+        width: 400px;
+        height: 300px;
+        background: #fff;
+      }
+      img {
+        border: 1px solid #ccc;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        min-width: 240px;
+      }
+      label {
+        font-size: 14px;
+        display: block;
+      }
+      input,
+      select,
+      button {
+        padding: 4px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        margin-top: 4px;
+        width: 100%;
+      }
+      .filter-item {
+        background: #f0f0f0;
+        padding: 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .filter-item:hover {
+        background: #e0e0e0;
+      }
+      .remove {
+        background: none;
+        border: none;
+        color: red;
+        font-weight: bold;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="svg-container">
+      <h3>Original Sea</h3>
+      <img src="./sea.jpg" width="400" height="300" alt="Sea waves" />
+    </div>
+
+    <div class="svg-container">
+      <h3>Animated Wavy Sea 🌊</h3>
+      <svg id="filteredSVG" viewBox="0 0 400 300">
+        <defs>
+          <filter id="waveFilter">
+            <feTurbulence
+              id="turb"
+              type="turbulence"
+              baseFrequency="0.02"
+              numOctaves="3"
+              result="turb"
+            />
+            <feDisplacementMap
+              id="disp"
+              in="SourceGraphic"
+              in2="turb"
+              scale="30"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </defs>
+        <image
+          id="seaImage"
+          href="./sea.jpg"
+          width="400"
+          height="300"
+          filter="url(#waveFilter)"
+        />
+      </svg>
+
+      <div class="controls">
+        <h4>Wave Controls</h4>
+        <label>
+          Base Frequency:
+          <input
+            type="range"
+            id="baseFreq"
+            min="0.001"
+            max="0.05"
+            step="0.001"
+            value="0.02"
+          />
+        </label>
+        <label>
+          Scale:
+          <input type="range" id="scale" min="0" max="80" step="1" value="30" />
+        </label>
+        <button id="toggle">Pause Animation</button>
+
+        <h4>Active Filters</h4>
+        <div id="filtersStack"></div>
+      </div>
+    </div>
+
+    <script>
+      const turb = document.getElementById("turb");
+      const disp = document.getElementById("disp");
+      const seaImage = document.getElementById("seaImage");
+      const baseFreqInput = document.getElementById("baseFreq");
+      const scaleInput = document.getElementById("scale");
+      const toggleBtn = document.getElementById("toggle");
+      const filtersStackDiv = document.getElementById("filtersStack");
+
+      let animating = true;
+      let frame = 0;
+
+      // Animate turbulence to simulate waves
+      function animate() {
+        if (animating) {
+          frame += 0.01;
+          let bf = parseFloat(baseFreqInput.value);
+          turb.setAttribute("baseFrequency", `${bf + Math.sin(frame) * 0.005}`);
+        }
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // Controls
+      baseFreqInput.addEventListener("input", () => {
+        turb.setAttribute("baseFrequency", baseFreqInput.value);
+      });
+      scaleInput.addEventListener("input", () => {
+        disp.setAttribute("scale", scaleInput.value);
+      });
+      toggleBtn.addEventListener("click", () => {
+        animating = !animating;
+        toggleBtn.textContent = animating
+          ? "Pause Animation"
+          : "Resume Animation";
+      });
+
+      // Stack UI for each primitive
+      function renderStack() {
+        filtersStackDiv.innerHTML = "";
+
+        // Turbulence
+        const turbDiv = document.createElement("div");
+        turbDiv.className = "filter-item";
+        turbDiv.textContent = "Turbulence";
+        turbDiv.addEventListener("mouseenter", () => {
+          turb.setAttribute("baseFrequency", "0"); // neutral
+        });
+        turbDiv.addEventListener("mouseleave", () => {
+          turb.setAttribute("baseFrequency", baseFreqInput.value);
+        });
+        const turbBtn = document.createElement("button");
+        turbBtn.className = "remove";
+        turbBtn.textContent = "X";
+        turbBtn.addEventListener("click", () => {
+          turb.setAttribute("baseFrequency", "0");
+          turbDiv.remove();
+        });
+        turbDiv.appendChild(turbBtn);
+        filtersStackDiv.appendChild(turbDiv);
+
+        // Displacement
+        const dispDiv = document.createElement("div");
+        dispDiv.className = "filter-item";
+        dispDiv.textContent = "Displacement";
+        dispDiv.addEventListener("mouseenter", () => {
+          disp.setAttribute("scale", "0"); // neutral
+        });
+        dispDiv.addEventListener("mouseleave", () => {
+          disp.setAttribute("scale", scaleInput.value);
+        });
+        const dispBtn = document.createElement("button");
+        dispBtn.className = "remove";
+        dispBtn.textContent = "X";
+        dispBtn.addEventListener("click", () => {
+          disp.setAttribute("scale", "0");
+          dispDiv.remove();
+        });
+        dispDiv.appendChild(dispBtn);
+        filtersStackDiv.appendChild(dispDiv);
+      }
+      renderStack();
+    </script>
+  </body>
+</html>
